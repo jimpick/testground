@@ -1,0 +1,38 @@
+name = "shaping-experiment"
+# hashicorp/go-getter URLs, so in the future we can support fetching test plans
+# from GitHub.
+source_path = "file://${TESTGROUND_SRCDIR}/plans/shaping-experiment"
+
+[build_strategies."docker:go"]
+enabled = true
+go_version = "1.13"
+module_path = "github.com/ipfs/testground/plans/shaping-experiment"
+exec_pkg = "."
+
+# TODO: exec:go is not ready yet
+[build_strategies."exec:go"]
+enabled = true
+module_path = "github.com/ipfs/testground/plans/shaping-experiment"
+exec_pkg = "."
+
+[run_strategies."local:docker"]
+enabled = true
+
+[run_strategies."local:exec"]
+enabled = true
+
+[run_strategies."cluster:swarm"]
+enabled = true
+
+# seq 0
+[[testcases]]
+name = "shape-traffic"
+instances = { min = 2, max = 200, default = 2 }
+
+  [testcases.params]
+  auto_refresh  = { type = "bool", desc = "enable DHT routing table autorefresh", unit = "bool", default = "true" }
+  random_walk   = { type = "bool", desc = "run 5 random walks before the test", unit = "bool", default = "false" }
+  bucket_size   = { type = "int", desc = "routing table bucket size", unit = "peers", default = "20" }
+  n_find_peers  = { type = "int", desc = "number of peers to find", unit = "peers", default = "1" }
+  timeout_secs  = { type = "int", desc = "test timeout", unit = "seconds", default = "30" }
+
