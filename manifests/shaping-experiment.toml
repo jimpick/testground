@@ -3,6 +3,10 @@ name = "shaping-experiment"
 # from GitHub.
 source_path = "file://${TESTGROUND_SRCDIR}/plans/shaping-experiment"
 
+[defaults]
+builder = "docker:go"
+runner = "local:docker"
+
 [build_strategies."docker:go"]
 enabled = true
 go_version = "1.13"
