@@ -22,7 +22,6 @@ require (
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v1.4.2-0.20191127125652-7c3d53ed640f
 	github.com/docker/go-connections v0.4.0 // indirect
-	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/google/go-cmp v0.3.1 // indirect
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/mux v1.7.3
@@ -32,8 +31,8 @@ require (
 	github.com/ipfs/testground/sdk/runtime v0.0.0-00010101000000-000000000000
 	github.com/ipfs/testground/sdk/sync v0.0.0-00010101000000-000000000000
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
+	github.com/libp2p/go-libp2p-kad-dht v0.4.0 // indirect
 	github.com/logrusorgru/aurora v0.0.0-20191017060258-dc85c304c434
-	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.0
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/morikuni/aec v1.0.0 // indirect
