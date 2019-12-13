@@ -16,6 +16,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
@@ -139,6 +140,12 @@ func (*ClusterSwarmRunner) Run(input *api.RunInput, ow io.Writer) (*api.RunOutpu
 		Driver:         "overlay",
 		CheckDuplicate: true,
 		// EnableIPv6:     true, // TODO(steb): this breaks.
+		IPAM: &network.IPAM{
+			Config: []network.IPAMConfig{{
+				Subnet:  dataSubnet,
+				Gateway: dataGateway,
+			}},
+		},
 		Internal:   true,
 		Attachable: true,
 		Scope:      "swarm",
