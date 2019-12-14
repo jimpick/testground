@@ -96,7 +96,7 @@ func main() {
 	switch {
 	case seq == 1: // adder
 		adder := client
-		fmt.Println("adder")
+		fmt.Fprintln(os.Stderr, "adder")
 
 		// generate a random file of the designated size.
 		file := utils.TempRandFile(runenv, ensemble.TempDir(), sizeBytes)
@@ -108,7 +108,7 @@ func main() {
 			runenv.Abort(err)
 			return
 		}
-		fmt.Println("cid", hash)
+		fmt.Fprintln(os.Stderr, "cid", hash)
 
 		c, err := cid.Parse(hash)
 		if err != nil {
@@ -128,7 +128,7 @@ func main() {
 		if err != nil {
 			runenv.Abort(err)
 		}
-		fmt.Println("State: added")
+		fmt.Fprintln(os.Stderr, "State: added")
 
 		// Set a state barrier.
 		receivedCh := watcher.Barrier(ctx, received, 1)
@@ -137,10 +137,11 @@ func main() {
 		if err := <-receivedCh; err != nil {
 			panic(err)
 		}
-		fmt.Println("State: received")
+		fmt.Fprintln(os.Stderr, "State: received")
+		runenv.OK()
 	case seq == 2: // getter
 		getter := client
-		fmt.Println("getter")
+		fmt.Fprintln(os.Stderr, "getter")
 
 		// Connect to other peers
 		peerCh := make(chan *peer.AddrInfo, 16)
@@ -186,7 +187,7 @@ func main() {
 		if err := <-addedCh; err != nil {
 			panic(err)
 		}
-		fmt.Println("State: added")
+		fmt.Fprintln(os.Stderr, "State: added")
 
 		cidCh := make(chan *cid.Cid, 0)
 		cancel, err = watcher.Subscribe(cidSubtree, cidCh)
@@ -216,7 +217,8 @@ func main() {
 		if err != nil {
 			runenv.Abort(err)
 		}
-		fmt.Println("State: received")
+		fmt.Fprintln(os.Stderr, "State: received")
+		runenv.OK()
 	default:
 		runenv.Abort(fmt.Errorf("Unexpected seq: %v", seq))
 	}

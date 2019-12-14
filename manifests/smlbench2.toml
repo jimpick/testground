@@ -2,6 +2,10 @@ name = "smlbench2"
 # hashicorp/go-getter URLs, so in the future we can support fetching test plans from GitHub.
 source_path = "file://${TESTGROUND_SRCDIR}/plans/smlbench2"
 
+[defaults]
+builder = "docker:go"
+runner = "local:docker"
+
 # Fetches latest go-ipfs
 [build_strategies."docker:go"]
 enabled = true
