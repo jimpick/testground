@@ -48,6 +48,10 @@ RUN cd ${PLAN_DIR} \
 RUN cd ${PLAN_DIR} \
   && go list -m all > /testground_dep_list
 
+# Optionally install IPFS
+RUN if [ -n "${GO_IPFS_VERSION}" ]; then echo Install IPFS ${GO_IPFS_VERSION}; bash /install-ipfs.sh ${GO_IPFS_VERSION}; fi
+RUN touch /tmp/delete_me
+
 #:::
 #::: RUNTIME CONTAINER
 #:::

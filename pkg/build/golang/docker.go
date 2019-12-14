@@ -118,13 +118,15 @@ func (b *DockerGoBuilder) Build(in *api.BuildInput, output io.Writer) (*api.Buil
 	defer os.RemoveAll(tmp)
 
 	var (
-		plansrc       = in.TestPlan.SourcePath
-		sdksrc        = filepath.Join(in.Directories.SourceDir(), "/sdk")
-		dockerfilesrc = filepath.Join(in.Directories.SourceDir(), "pkg/build/golang", "Dockerfile.template")
+		plansrc        = in.TestPlan.SourcePath
+		sdksrc         = filepath.Join(in.Directories.SourceDir(), "/sdk")
+		dockerfilesrc  = filepath.Join(in.Directories.SourceDir(), "pkg/build/golang", "Dockerfile.template")
+		installipfssrc = filepath.Join(in.Directories.SourceDir(), "pkg/build/golang", "install-ipfs.sh")
 
-		plandst       = filepath.Join(tmp, "plan")
-		sdkdst        = filepath.Join(tmp, "sdk")
-		dockerfiledst = filepath.Join(tmp, "Dockerfile")
+		plandst        = filepath.Join(tmp, "plan")
+		sdkdst         = filepath.Join(tmp, "sdk")
+		dockerfiledst  = filepath.Join(tmp, "Dockerfile")
+		installipfsdst = filepath.Join(tmp, "install-ipfs.sh")
 	)
 
 	// Copy the plan's source; go-getter will create the dir.
@@ -137,6 +139,11 @@ func (b *DockerGoBuilder) Build(in *api.BuildInput, output io.Writer) (*api.Buil
 
 	// Copy the dockerfile.
 	if err := copyFile(dockerfiledst, dockerfilesrc); err != nil {
+		return nil, err
+	}
+
+	// Copy the install-ipfs.sh file
+	if err := copyFile(installipfsdst, installipfssrc); err != nil {
 		return nil, err
 	}
 
