@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"time"
 
-	utils "github.com/ipfs/testground/plans/data-transfer-datasets-random/utils"
+	utils "github.com/ipfs/testground/plans/smlbench2/utils"
 	iptb "github.com/ipfs/testground/sdk/iptb"
 	"github.com/ipfs/testground/sdk/runtime"
 	"github.com/ipfs/testground/sdk/sync"

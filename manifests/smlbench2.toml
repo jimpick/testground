@@ -1,12 +1,12 @@
-name = "data-transfer-datasets-random"
+name = "smlbench2"
 # hashicorp/go-getter URLs, so in the future we can support fetching test plans from GitHub.
-source_path = "file://${TESTGROUND_SRCDIR}/plans/data-transfer-datasets-random"
+source_path = "file://${TESTGROUND_SRCDIR}/plans/smlbench2"
 
 # Fetches latest go-ipfs
 [build_strategies."docker:go"]
 enabled = true
 go_version = "1.13"
-module_path = "github.com/ipfs/testground/plans/data-transfer-datasets-random"
+module_path = "github.com/ipfs/testground/plans/smlbench2"
 exec_pkg = "."
 go_ipfs_version = "0.4.22"
 
