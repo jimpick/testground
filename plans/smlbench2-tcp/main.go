@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"reflect"
 	"time"
@@ -13,8 +14,8 @@ import (
 	"github.com/ipfs/testground/sdk/sync"
 	"github.com/libp2p/go-libp2p-core/peer"
 	// shell "github.com/ipfs/go-ipfs-api"
-	ma "github.com/multiformats/go-multiaddr"
 	"github.com/ipfs/go-cid"
+	ma "github.com/multiformats/go-multiaddr"
 )
 
 const (
@@ -23,29 +24,34 @@ const (
 )
 
 var cidSubtree = &sync.Subtree{
-        GroupKey:    "cid",
-        PayloadType: reflect.TypeOf(&cid.Cid{}),
-        KeyFunc: func(val interface{}) string {
-                return "cid"
-        },
+	GroupKey:    "cid",
+	PayloadType: reflect.TypeOf(&cid.Cid{}),
+	KeyFunc: func(val interface{}) string {
+		return "cid"
+	},
 }
 
 func main() {
 	runenv := runtime.CurrentRunEnv()
-	if runenv.TestCaseSeq < 0 {
-		panic("test case sequence number not set")
+
+	ifaddrs, err := net.InterfaceAddrs()
+	if err != nil {
+		runenv.Abort(err)
 	}
+	fmt.Fprintln(os.Stderr, "Addrs:", ifaddrs)
+
+	// _, localnet, _ := net.ParseCIDR("10.0.0.0/16")
 
 	timeout := func() time.Duration {
-                if t, ok := runenv.IntParam("timeout_secs"); !ok {
-                        return 30 * time.Second
-                } else {
-                        return time.Duration(t) * time.Second
-                }
-        }()
+		if t, ok := runenv.IntParam("timeout_secs"); !ok {
+			return 30 * time.Second
+		} else {
+			return time.Duration(t) * time.Second
+		}
+	}()
 
 	watcher, writer := sync.MustWatcherWriter(runenv)
-        defer watcher.Close()
+	defer watcher.Close()
 
 	spec := iptb.NewTestEnsembleSpec()
 	spec.AddNodesDefaultConfig(iptb.NodeOpts{Initialize: true, Start: true}, "local")
@@ -83,9 +89,9 @@ func main() {
 
 	seq, err := writer.Write(sync.PeerSubtree, addrInfo)
 	if err != nil {
-                runenv.Abort(err)
-        }
-        defer writer.Close()
+		runenv.Abort(err)
+	}
+	defer writer.Close()
 
 	client := localNode.Client()
 
@@ -225,4 +231,3 @@ func main() {
 
 	ensemble.Destroy()
 }
-
