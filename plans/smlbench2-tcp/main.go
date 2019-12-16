@@ -8,14 +8,17 @@ import (
 	"os"
 	"reflect"
 	"sync"
+	"time"
 
 	"github.com/ipfs/testground/sdk/runtime"
 	sdksync "github.com/ipfs/testground/sdk/sync"
 )
 
-const (
-	// sizeBytes = 10 * 1024 * 1024 // 10mb
-	sizeBytes = 100 * 1024 * 1024 // 100mb
+var (
+        MetricBytesSent    = &runtime.MetricDefinition{Name: "sent_bytes", Unit: "bytes", ImprovementDir: -1}
+        MetricBytesReceived = &runtime.MetricDefinition{Name: "received_bytes", Unit: "bytes", ImprovementDir: -1}
+        MetricTimeToSend     = &runtime.MetricDefinition{Name: "time_to_send", Unit: "ms", ImprovementDir: -1}
+        MetricTimeToReceive = &runtime.MetricDefinition{Name: "time_to_receive", Unit: "ms", ImprovementDir: -1}
 )
 
 var peerIPSubtree = &sdksync.Subtree{
@@ -76,7 +79,7 @@ func main() {
 
 	switch {
 	case seq == 1: // receiver
-		fmt.Fprintln(os.Stderr, "Receiver:", peerIP)
+		// fmt.Fprintln(os.Stderr, "Receiver:", peerIP)
 
 		quit := make(chan int)
 
@@ -96,15 +99,14 @@ func main() {
 			runenv.Abort(err)
 			return
 		}
-		fmt.Fprintln(os.Stderr, "State: ready")
+		// fmt.Fprintln(os.Stderr, "State: ready")
 
 		var wg sync.WaitGroup
 		wg.Add(runenv.TestInstanceCount - 1)
-		fmt.Fprintln(os.Stderr, "Waiting for connections:", runenv.TestInstanceCount-1)
+		// fmt.Fprintln(os.Stderr, "Waiting for connections:", runenv.TestInstanceCount-1)
 
 		go func() {
 			for {
-				// Wait for a connection.
 				conn, err := l.Accept()
 				if err != nil {
 					select {
@@ -115,22 +117,21 @@ func main() {
 						return
 					}
 				}
-				// Handle the connection in a new goroutine.
-				// The loop then returns to accepting, so that
-				// multiple connections may be served concurrently.
 				go func(c net.Conn) {
 					defer c.Close()
 					bytesRead := 0
 					buf := make([]byte, 128*1024)
+					tstarted := time.Now()
 					for {
 						n, err := c.Read(buf)
 						bytesRead += n
-						fmt.Fprintln(os.Stderr, "Received", n)
+						// fmt.Fprintln(os.Stderr, "Received", n)
 						if err == io.EOF {
 							break
 						}
 					}
-					fmt.Fprintln(os.Stderr, "Bytes read:", bytesRead)
+					runenv.EmitMetric(MetricBytesReceived, float64(bytesRead))
+					runenv.EmitMetric(MetricTimeToReceive, float64(time.Now().Sub(tstarted)/time.Millisecond))
 					wg.Done()
 				}(conn)
 			}
@@ -139,7 +140,7 @@ func main() {
 		wg.Wait()
 
 	case seq == 2: // sender
-		fmt.Fprintln(os.Stderr, "Sender:", peerIP)
+		// fmt.Fprintln(os.Stderr, "Sender:", peerIP)
 
 		// Connect to other peers
 		peerIPCh := make(chan *net.IP, 16)
@@ -157,22 +158,19 @@ func main() {
 			}
 			peerIPsToDial = append(peerIPsToDial, *receivedPeerIP)
 		}
-		fmt.Fprintln(os.Stderr, "Waiting for ready")
-
-		// Set a state barrier.
-		readyCh := watcher.Barrier(ctx, ready, 1)
 
 		// Wait until ready state is signalled.
+		// fmt.Fprintln(os.Stderr, "Waiting for ready")
+		readyCh := watcher.Barrier(ctx, ready, 1)
 		if err := <-readyCh; err != nil {
 			panic(err)
 		}
-		fmt.Fprintln(os.Stderr, "State: ready")
+		// fmt.Fprintln(os.Stderr, "State: ready")
 
 		for _, peerIPToDial := range peerIPsToDial {
-			fmt.Fprintln(os.Stderr, "Dialing", peerIPToDial)
+			// fmt.Fprintln(os.Stderr, "Dialing", peerIPToDial)
 			conn, err := net.Dial("tcp", peerIPToDial.String()+":2000")
 			if err != nil {
-				// handle error
 				fmt.Fprintln(os.Stderr, "Error", err)
 				return
 			}
@@ -181,51 +179,21 @@ func main() {
 				buf[i] = byte(i)
 			}
 			bytesWritten := 0
-			for i := 0; i < 10; i++ {
+			tstarted := time.Now()
+			for i := 0; i < 100; i++ {
 				n, err := conn.Write(buf)
-				fmt.Fprintln(os.Stderr, "Sent", n)
+				// fmt.Fprintln(os.Stderr, "Sent", n)
 				bytesWritten += n
 				if err != nil {
 					fmt.Fprintln(os.Stderr, "Error", err)
 					break
 				}
 			}
-			fmt.Fprintln(os.Stderr, "Bytes written:", bytesWritten)
+			runenv.EmitMetric(MetricBytesSent, float64(bytesWritten))
+			runenv.EmitMetric(MetricTimeToSend, float64(time.Now().Sub(tstarted)/time.Millisecond))
 			conn.Close()
 		}
 
-		/*
-			cidCh := make(chan *cid.Cid, 0)
-			cancel, err = watcher.Subscribe(cidSubtree, cidCh)
-			if err != nil {
-				runenv.Abort(err)
-			}
-			defer cancel()
-			select {
-			case c := <-cidCh:
-				cancel()
-				// Get the content from the adder node
-				tstarted := time.Now()
-				err = getter.Get(c.String(), ensemble.TempDir())
-				if err != nil {
-					runenv.Abort(err)
-					return
-				}
-				runenv.EmitMetric(utils.MetricTimeToGet, float64(time.Now().Sub(tstarted)/time.Millisecond))
-			case <-time.After(timeout):
-				// TODO need a way to fail a distributed test immediately. No point
-				// making it run elsewhere beyond this point.
-				panic(fmt.Sprintf("no cid in %d seconds", timeout))
-			}
-
-			// Signal we're reached the received state.
-			_, err = writer.SignalEntry(received)
-			if err != nil {
-				runenv.Abort(err)
-			}
-			fmt.Fprintln(os.Stderr, "State: received")
-			runenv.OK()
-		*/
 	default:
 		runenv.Abort(fmt.Errorf("Unexpected seq: %v", seq))
 	}
