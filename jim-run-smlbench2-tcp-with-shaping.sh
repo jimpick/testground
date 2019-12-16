@@ -3,4 +3,4 @@
 ./testground -vv \
   run \
   --build-cfg bypass_cache=true \
-  smlbench2-tcp/upload
+  smlbench2-tcp/upload-with-shaping

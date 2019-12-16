@@ -11,6 +11,7 @@ FROM golang:${GO_VERSION}-buster
 
 # Unfortunately there's no way to specify a ** glob pattern to cover all go.mods
 # inside sdk.
+COPY /sdk/iptb/go.mod /sdk/iptb/go.mod
 COPY /sdk/sync/go.mod /sdk/sync/go.mod
 COPY /sdk/runtime/go.mod /sdk/runtime/go.mod
 COPY /go.mod /go.mod

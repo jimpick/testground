@@ -31,6 +31,14 @@ var peerIPSubtree = &sdksync.Subtree{
 
 func main() {
 	runenv := runtime.CurrentRunEnv()
+	withShaping := runenv.TestCaseSeq == 1
+
+	ctx := context.Background()
+
+	if withShaping && !runenv.TestSidecar {
+		runenv.Abort("Need sidecar to shape traffic")
+		return
+	}
 
 	ifaddrs, err := net.InterfaceAddrs()
 	if err != nil {
@@ -65,7 +73,47 @@ func main() {
 	watcher, writer := sdksync.MustWatcherWriter(runenv)
 	defer watcher.Close()
 
-	ctx := context.Background()
+	if withShaping {
+		runenv.Message("Waiting for network to be initialized")
+		if err := sdksync.WaitNetworkInitialized(ctx, runenv, watcher); err != nil {
+		    runenv.Abort(err)
+		    return
+		}
+		runenv.Message("Network initialized")
+
+		config := sdksync.NetworkConfig{
+		    // Control the "default" network. At the moment, this is the only network.
+		    Network: "default",
+
+		    // Enable this network. Setting this to false will disconnect this test 
+		    // instance from this network. You probably don't want to do that.
+		    Enable:  true,
+		}
+		config.Default = sdksync.LinkShape{
+		    // Latency:   100 * time.Millisecond,
+		    Bandwidth: 1 << 20, // 1Mib
+		}
+		config.State = "network-configured"
+
+		hostname, err := os.Hostname()
+		if err != nil {
+			runenv.Abort(err)
+			return
+		}
+
+		_, err = writer.Write(sdksync.NetworkSubtree(hostname), &config)
+		if err != nil {
+		    runenv.Abort(err)
+		    return
+		}
+
+		err = <-watcher.Barrier(ctx, config.State, int64(runenv.TestInstanceCount))
+		if err != nil {
+		    runenv.Abort(err)
+		    return
+		}
+		runenv.Message("Network configured")
+	}
 
 	seq, err := writer.Write(peerIPSubtree, &peerIP)
 	if err != nil {
@@ -79,7 +127,7 @@ func main() {
 
 	switch {
 	case seq == 1: // receiver
-		// fmt.Fprintln(os.Stderr, "Receiver:", peerIP)
+		runenv.Message(fmt.Sprintf("Receiver: %v", peerIP))
 
 		quit := make(chan int)
 
@@ -125,7 +173,7 @@ func main() {
 					for {
 						n, err := c.Read(buf)
 						bytesRead += n
-						// fmt.Fprintln(os.Stderr, "Received", n)
+						// runenv.Message(fmt.Sprintf("Received %v", n))
 						if err == io.EOF {
 							break
 						}
@@ -140,7 +188,7 @@ func main() {
 		wg.Wait()
 
 	case seq == 2: // sender
-		// fmt.Fprintln(os.Stderr, "Sender:", peerIP)
+		runenv.Message(fmt.Sprintf("Sender: %v", peerIP))
 
 		// Connect to other peers
 		peerIPCh := make(chan *net.IP, 16)
@@ -180,7 +228,7 @@ func main() {
 			}
 			bytesWritten := 0
 			tstarted := time.Now()
-			for i := 0; i < 100; i++ {
+			for i := 0; i < 10; i++ {
 				n, err := conn.Write(buf)
 				// fmt.Fprintln(os.Stderr, "Sent", n)
 				bytesWritten += n
