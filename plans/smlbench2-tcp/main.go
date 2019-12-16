@@ -37,10 +37,32 @@ func main() {
 	ifaddrs, err := net.InterfaceAddrs()
 	if err != nil {
 		runenv.Abort(err)
+		return
 	}
 	fmt.Fprintln(os.Stderr, "Addrs:", ifaddrs)
 
-	// _, localnet, _ := net.ParseCIDR("10.0.0.0/16")
+	_, localnet, _ := net.ParseCIDR("8.0.0.0/8")
+
+	var matchedIP net.IP
+        for _, ifaddr := range ifaddrs {
+                var ip net.IP
+                switch v := ifaddr.(type) {
+                case *net.IPNet:
+                        ip = v.IP
+                case *net.IPAddr:
+                        ip = v.IP
+                }
+                fmt.Fprintln(os.Stderr, "IP:", ip)
+                if localnet.Contains(ip) {
+                        matchedIP = ip
+                        break
+                }
+        }
+        fmt.Fprintln(os.Stderr, "Matched IP:", matchedIP)
+        if matchedIP == nil {
+		runenv.Abort("No IP match")
+		return
+        }
 
 	timeout := func() time.Duration {
 		if t, ok := runenv.IntParam("timeout_secs"); !ok {
@@ -65,16 +87,19 @@ func main() {
 	peerID, err := localNode.PeerID()
 	if err != nil {
 		runenv.Abort(err)
+		return
 	}
 
 	swarmAddrs, err := localNode.SwarmAddrs()
 	if err != nil {
 		runenv.Abort(err)
+		return
 	}
 
 	ID, err := peer.IDB58Decode(peerID)
 	if err != nil {
 		runenv.Abort(err)
+		return
 	}
 
 	addrs := make([]ma.Multiaddr, len(swarmAddrs))
@@ -82,6 +107,7 @@ func main() {
 		multiAddr, err := ma.NewMultiaddr(addr)
 		if err != nil {
 			runenv.Abort(err)
+			return
 		}
 		addrs[i] = multiAddr
 	}
@@ -90,6 +116,7 @@ func main() {
 	seq, err := writer.Write(sync.PeerSubtree, addrInfo)
 	if err != nil {
 		runenv.Abort(err)
+		return
 	}
 	defer writer.Close()
 
