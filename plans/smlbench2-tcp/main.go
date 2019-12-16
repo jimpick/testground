@@ -1,21 +1,15 @@
 package main
 
 import (
-	"context"
+	// "context"
 	"fmt"
 	"net"
 	"os"
 	"reflect"
-	"time"
+	// "time"
 
-	utils "github.com/ipfs/testground/plans/smlbench2-tcp/utils"
-	iptb "github.com/ipfs/testground/sdk/iptb"
 	"github.com/ipfs/testground/sdk/runtime"
 	"github.com/ipfs/testground/sdk/sync"
-	"github.com/libp2p/go-libp2p-core/peer"
-	// shell "github.com/ipfs/go-ipfs-api"
-	"github.com/ipfs/go-cid"
-	ma "github.com/multiformats/go-multiaddr"
 )
 
 const (
@@ -23,6 +17,15 @@ const (
 	sizeBytes = 100 * 1024 * 1024 // 100mb
 )
 
+var peerIPSubtree = &sync.Subtree{
+	GroupKey:    "peerIPs",
+	PayloadType: reflect.TypeOf(&net.IP{}),
+	KeyFunc: func(val interface{}) string {
+		return val.(*net.IP).String()
+	},
+}
+
+/*
 var cidSubtree = &sync.Subtree{
 	GroupKey:    "cid",
 	PayloadType: reflect.TypeOf(&cid.Cid{}),
@@ -30,6 +33,7 @@ var cidSubtree = &sync.Subtree{
 		return "cid"
 	},
 }
+*/
 
 func main() {
 	runenv := runtime.CurrentRunEnv()
@@ -43,7 +47,7 @@ func main() {
 
 	_, localnet, _ := net.ParseCIDR("8.0.0.0/8")
 
-	var matchedIP net.IP
+	var peerIP net.IP
         for _, ifaddr := range ifaddrs {
                 var ip net.IP
                 switch v := ifaddr.(type) {
@@ -54,16 +58,17 @@ func main() {
                 }
                 fmt.Fprintln(os.Stderr, "IP:", ip)
                 if localnet.Contains(ip) {
-                        matchedIP = ip
+                        peerIP = ip
                         break
                 }
         }
-        fmt.Fprintln(os.Stderr, "Matched IP:", matchedIP)
-        if matchedIP == nil {
+        fmt.Fprintln(os.Stderr, "Matched IP:", peerIP)
+        if peerIP == nil {
 		runenv.Abort("No IP match")
 		return
         }
 
+	/*
 	timeout := func() time.Duration {
 		if t, ok := runenv.IntParam("timeout_secs"); !ok {
 			return 30 * time.Second
@@ -71,57 +76,23 @@ func main() {
 			return time.Duration(t) * time.Second
 		}
 	}()
+	*/
 
 	watcher, writer := sync.MustWatcherWriter(runenv)
 	defer watcher.Close()
 
-	spec := iptb.NewTestEnsembleSpec()
-	spec.AddNodesDefaultConfig(iptb.NodeOpts{Initialize: true, Start: true}, "local")
+	// ctx := context.Background()
 
-	ctx := context.Background()
-	ensemble := iptb.NewTestEnsemble(ctx, spec)
-	ensemble.Initialize()
-
-	localNode := ensemble.GetNode("local")
-
-	peerID, err := localNode.PeerID()
-	if err != nil {
-		runenv.Abort(err)
-		return
-	}
-
-	swarmAddrs, err := localNode.SwarmAddrs()
-	if err != nil {
-		runenv.Abort(err)
-		return
-	}
-
-	ID, err := peer.IDB58Decode(peerID)
-	if err != nil {
-		runenv.Abort(err)
-		return
-	}
-
-	addrs := make([]ma.Multiaddr, len(swarmAddrs))
-	for i, addr := range swarmAddrs {
-		multiAddr, err := ma.NewMultiaddr(addr)
-		if err != nil {
-			runenv.Abort(err)
-			return
-		}
-		addrs[i] = multiAddr
-	}
-	addrInfo := &peer.AddrInfo{ID, addrs}
-
-	seq, err := writer.Write(sync.PeerSubtree, addrInfo)
+	seq, err := writer.Write(peerIPSubtree, &peerIP)
 	if err != nil {
 		runenv.Abort(err)
 		return
 	}
 	defer writer.Close()
 
-	client := localNode.Client()
+	fmt.Fprintln(os.Stderr, "Jim1 seq", seq)
 
+	/*
 	// States
 	added := sync.State("added")
 	received := sync.State("received")
@@ -257,4 +228,6 @@ func main() {
 	}
 
 	ensemble.Destroy()
+	*/
+	runenv.OK()
 }
