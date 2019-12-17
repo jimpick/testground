@@ -15,10 +15,10 @@ import (
 )
 
 var (
-        MetricBytesSent    = &runtime.MetricDefinition{Name: "sent_bytes", Unit: "bytes", ImprovementDir: -1}
-        MetricBytesReceived = &runtime.MetricDefinition{Name: "received_bytes", Unit: "bytes", ImprovementDir: -1}
-        MetricTimeToSend     = &runtime.MetricDefinition{Name: "time_to_send", Unit: "ms", ImprovementDir: -1}
-        MetricTimeToReceive = &runtime.MetricDefinition{Name: "time_to_receive", Unit: "ms", ImprovementDir: -1}
+	MetricBytesSent     = &runtime.MetricDefinition{Name: "sent_bytes", Unit: "bytes", ImprovementDir: -1}
+	MetricBytesReceived = &runtime.MetricDefinition{Name: "received_bytes", Unit: "bytes", ImprovementDir: -1}
+	MetricTimeToSend    = &runtime.MetricDefinition{Name: "time_to_send", Unit: "ms", ImprovementDir: -1}
+	MetricTimeToReceive = &runtime.MetricDefinition{Name: "time_to_receive", Unit: "ms", ImprovementDir: -1}
 )
 
 var peerIPSubtree = &sdksync.Subtree{
@@ -45,7 +45,6 @@ func main() {
 		runenv.Abort(err)
 		return
 	}
-	// fmt.Fprintln(os.Stderr, "Addrs:", ifaddrs)
 
 	_, localnet, _ := net.ParseCIDR("8.0.0.0/8")
 
@@ -58,13 +57,11 @@ func main() {
 		case *net.IPAddr:
 			ip = v.IP
 		}
-		// fmt.Fprintln(os.Stderr, "IP:", ip)
 		if localnet.Contains(ip) {
 			peerIP = ip
 			break
 		}
 	}
-	//fmt.Fprintln(os.Stderr, "Matched IP:", peerIP)
 	if peerIP == nil {
 		runenv.Abort("No IP match")
 		return
@@ -76,22 +73,22 @@ func main() {
 	if withShaping {
 		runenv.Message("Waiting for network to be initialized")
 		if err := sdksync.WaitNetworkInitialized(ctx, runenv, watcher); err != nil {
-		    runenv.Abort(err)
-		    return
+			runenv.Abort(err)
+			return
 		}
 		runenv.Message("Network initialized")
 
 		config := sdksync.NetworkConfig{
-		    // Control the "default" network. At the moment, this is the only network.
-		    Network: "default",
+			// Control the "default" network. At the moment, this is the only network.
+			Network: "default",
 
-		    // Enable this network. Setting this to false will disconnect this test 
-		    // instance from this network. You probably don't want to do that.
-		    Enable:  true,
+			// Enable this network. Setting this to false will disconnect this test
+			// instance from this network. You probably don't want to do that.
+			Enable: true,
 		}
 		config.Default = sdksync.LinkShape{
-		    // Latency:   100 * time.Millisecond,
-		    Bandwidth: 1 << 20, // 1Mib
+			// Latency:   100 * time.Millisecond,
+			Bandwidth: 1 << 20, // 1Mib
 		}
 		config.State = "network-configured"
 
@@ -103,14 +100,14 @@ func main() {
 
 		_, err = writer.Write(sdksync.NetworkSubtree(hostname), &config)
 		if err != nil {
-		    runenv.Abort(err)
-		    return
+			runenv.Abort(err)
+			return
 		}
 
 		err = <-watcher.Barrier(ctx, config.State, int64(runenv.TestInstanceCount))
 		if err != nil {
-		    runenv.Abort(err)
-		    return
+			runenv.Abort(err)
+			return
 		}
 		runenv.Message("Network configured")
 	}
