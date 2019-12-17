@@ -121,6 +121,7 @@ func main() {
 
 	// States
 	ready := sdksync.State("ready")
+	received := sdksync.State("received")
 
 	switch {
 	case seq == 1: // receiver
@@ -144,11 +145,11 @@ func main() {
 			runenv.Abort(err)
 			return
 		}
-		// fmt.Fprintln(os.Stderr, "State: ready")
+		// runenv.Message("State: ready")
 
 		var wg sync.WaitGroup
 		wg.Add(runenv.TestInstanceCount - 1)
-		// fmt.Fprintln(os.Stderr, "Waiting for connections:", runenv.TestInstanceCount-1)
+		// runenv.Message(fmt.Sprintf("Waiting for connections: %v", runenv.TestInstanceCount-1))
 
 		go func() {
 			for {
@@ -156,12 +157,14 @@ func main() {
 				if err != nil {
 					select {
 					case <-quit:
+						// runenv.Message("Accepted, but quitting")
 						return
 					default:
 						runenv.Abort(err)
 						return
 					}
 				}
+				// runenv.Message("Accepted")
 				go func(c net.Conn) {
 					defer c.Close()
 					bytesRead := 0
@@ -172,7 +175,12 @@ func main() {
 						bytesRead += n
 						// runenv.Message(fmt.Sprintf("Received %v", n))
 						if err == io.EOF {
+							// runenv.Message("EOF")
 							break
+						} else if err != nil {
+							fmt.Fprintln(os.Stderr, "Error", err)
+							wg.Done()
+							return
 						}
 					}
 					runenv.EmitMetric(MetricBytesReceived, float64(bytesRead))
@@ -183,6 +191,14 @@ func main() {
 		}()
 
 		wg.Wait()
+
+		// Signal we've received all the data
+		_, err = writer.SignalEntry(received)
+		if err != nil {
+			runenv.Abort(err)
+			return
+		}
+		// runenv.Message("State: received")
 
 	case seq == 2: // sender
 		runenv.Message(fmt.Sprintf("Sender: %v", peerIP))
@@ -205,15 +221,15 @@ func main() {
 		}
 
 		// Wait until ready state is signalled.
-		// fmt.Fprintln(os.Stderr, "Waiting for ready")
+		// runenv.Message("Waiting for ready")
 		readyCh := watcher.Barrier(ctx, ready, 1)
 		if err := <-readyCh; err != nil {
 			panic(err)
 		}
-		// fmt.Fprintln(os.Stderr, "State: ready")
+		// runenv.Message("State: ready")
 
 		for _, peerIPToDial := range peerIPsToDial {
-			// fmt.Fprintln(os.Stderr, "Dialing", peerIPToDial)
+			// runenv.Message(fmt.Sprintf("Dialing %v", peerIPToDial))
 			conn, err := net.Dial("tcp", peerIPToDial.String()+":2000")
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "Error", err)
@@ -227,7 +243,7 @@ func main() {
 			tstarted := time.Now()
 			for i := 0; i < 10; i++ {
 				n, err := conn.Write(buf)
-				// fmt.Fprintln(os.Stderr, "Sent", n)
+				// runenv.Message(fmt.Sprintf("Sent %v", n))
 				bytesWritten += n
 				if err != nil {
 					fmt.Fprintln(os.Stderr, "Error", err)
@@ -238,6 +254,14 @@ func main() {
 			runenv.EmitMetric(MetricTimeToSend, float64(time.Now().Sub(tstarted)/time.Millisecond))
 			conn.Close()
 		}
+
+		// Wait until all data is received before shutting down
+		// runenv.Message("Waiting for received state")
+		receivedCh := watcher.Barrier(ctx, received, 1)
+		if err := <-receivedCh; err != nil {
+			panic(err)
+		}
+		// runenv.Message("State: received")
 
 	default:
 		runenv.Abort(fmt.Errorf("Unexpected seq: %v", seq))
