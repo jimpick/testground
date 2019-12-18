@@ -291,7 +291,7 @@ func deleteContainers(cli *client.Client, log *zap.SugaredLogger, ids []string) 
 	return merr.ErrorOrNil()
 }
 
-func ensureControlNetwork(ctx context.Content, cli *client.Client, log *zap.SugaredLogger) (id string, err error) {
+func ensureControlNetwork(ctx context.Context, cli *client.Client, log *zap.SugaredLogger) (id string, err error) {
 	return docker.EnsureBridgeNetwork(
 		ctx,
 		log, cli,
