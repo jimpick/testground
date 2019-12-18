@@ -147,8 +147,20 @@ func (*ClusterSwarmRunner) Run(ctx context.Context, input *api.RunInput, ow io.W
 		return nil, fmt.Errorf("testground-redis service doesn't exist in the swarm cluster; aborting")
 	}
 
+	// We can't create a network for every testplan on the same range,
+	// so we check how many networks we have and decide based on this number
+	networks, err := cli.NetworkList(ctx, types.NetworkListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	currentNetworkId := 10 + len(networks)
+
+	subnet := fmt.Sprintf("10.%d.0.0/16", currentNetworkId)
+	gateway := fmt.Sprintf("10.%d.0.1", currentNetworkId)
+
 	// Create the data network.
-	log.Infow("creating data network", "name", sname)
+	log.Infow("creating data network", "name", sname, "subnet", subnet)
 
 	networkSpec := types.NetworkCreate{
 		Driver:         "overlay",
@@ -160,8 +172,10 @@ func (*ClusterSwarmRunner) Run(ctx context.Context, input *api.RunInput, ow io.W
 		IPAM: &network.IPAM{
 			Driver: "default",
 			Config: []network.IPAMConfig{{
-				Subnet:  dataSubnet,
-				Gateway: dataGateway,
+				// Subnet:  dataSubnet,
+				// Gateway: dataGateway,
+				Subnet:  subnet,
+				Gateway: gateway,
 			}},
 		},
 		Labels: map[string]string{
@@ -233,7 +247,7 @@ func (*ClusterSwarmRunner) Run(ctx context.Context, input *api.RunInput, ow io.W
 				},
 			},
 			Placement: &swarm.Placement{
-				MaxReplicas: 10000,
+				MaxReplicas: 100,
 				Constraints: []string{
 					"node.labels.TGRole==worker",
 				},
