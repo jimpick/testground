@@ -1,5 +1,6 @@
 #! /bin/bash
 
+# sudo apt install gnupg2 pass
 # $(aws ecr get-login --no-include-email --region us-west-2)
 
 docker tag ipfs/testground:latest 909427826938.dkr.ecr.us-west-2.amazonaws.com/testground:latest

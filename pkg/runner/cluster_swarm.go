@@ -1,7 +1,6 @@
 package runner
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -19,7 +18,6 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/stdcopy"
 )
 
 var (
@@ -214,6 +212,13 @@ func (*ClusterSwarmRunner) Run(ctx context.Context, input *api.RunInput, ow io.W
 	// Create the service.
 	log.Infow("creating service", "name", sname, "image", image, "replicas", replicas)
 
+	log.Infow(
+		"docker service create " +
+			fmt.Sprintf("--replicas %v ", replicas) +
+			fmt.Sprintf("--name %v ", sname) +
+			"--with-registry-auth " +
+			image,
+	)
 	serviceSpec := swarm.ServiceSpec{
 		Networks: []swarm.NetworkAttachmentConfig{
 			{Target: "control"},
@@ -283,6 +288,7 @@ func (*ClusterSwarmRunner) Run(ctx context.Context, input *api.RunInput, ow io.W
 	serviceID := serviceResp.ID
 
 	logging.S().Infow("service created successfully", "id", serviceID)
+	// return nil, fmt.Errorf("jim forced error")
 
 	out := &api.RunOutput{RunnerID: serviceID}
 
@@ -293,25 +299,27 @@ func (*ClusterSwarmRunner) Run(ctx context.Context, input *api.RunInput, ow io.W
 
 	// Tail the service until all instances are done, then remove the service if
 	// the flag has been set.
-	rc, err := cli.ServiceLogs(context.Background(), serviceID, types.ContainerLogsOptions{
-		ShowStdout: true,
-		ShowStderr: true,
-		Since:      "2019-01-01T00:00:00",
-		Follow:     true,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed while tailing logs: %w", err)
-	}
+	/*
+		rc, err := cli.ServiceLogs(context.Background(), serviceID, types.ContainerLogsOptions{
+			ShowStdout: true,
+			ShowStderr: true,
+			Since:      "2019-01-01T00:00:00",
+			Follow:     true,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed while tailing logs: %w", err)
+		}
 
-	// Docker multiplexes STDOUT and STDERR streams inside the single IO stream
-	// returned by ServiceLogs. We need to use docker functions to separate
-	// those strands, and because we don't care about treating STDOUT and STDERR
-	// separately, we consolidate them into the same io.Writer.
-	rpipe, wpipe := io.Pipe()
-	go func() {
-		_, err := stdcopy.StdCopy(wpipe, wpipe, rc)
-		_ = wpipe.CloseWithError(err)
-	}()
+		// Docker multiplexes STDOUT and STDERR streams inside the single IO stream
+		// returned by ServiceLogs. We need to use docker functions to separate
+		// those strands, and because we don't care about treating STDOUT and STDERR
+		// separately, we consolidate them into the same io.Writer.
+		rpipe, wpipe := io.Pipe()
+		go func() {
+			_, err := stdcopy.StdCopy(wpipe, wpipe, rc)
+			_ = wpipe.CloseWithError(err)
+		}()
+	*/
 
 	// This goroutine monitors the state of tasks every two seconds. When all
 	// tasks are shutdown, we are done here. We close the logs io.ReadCloser,
@@ -331,7 +339,7 @@ func (*ClusterSwarmRunner) Run(ctx context.Context, input *api.RunInput, ow io.W
 
 			if err != nil {
 				if errCnt++; errCnt > 3 {
-					rc.Close()
+					// rc.Close()
 					return
 				}
 			}
@@ -349,16 +357,18 @@ func (*ClusterSwarmRunner) Run(ctx context.Context, input *api.RunInput, ow io.W
 			logging.S().Infow("task status", "status", status)
 
 			if finished == replicas {
-				rc.Close()
+				// rc.Close()
 				return
 			}
 		}
 	}()
 
-	scanner := bufio.NewScanner(rpipe)
-	for scanner.Scan() {
-		fmt.Println(scanner.Text())
-	}
+	/*
+		scanner := bufio.NewScanner(rpipe)
+		for scanner.Scan() {
+			fmt.Println(scanner.Text())
+		}
+	*/
 
 	if !cfg.KeepService {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
