@@ -31,6 +31,12 @@ var peerIPSubtree = &sdksync.Subtree{
 
 func main() {
 	runenv := runtime.CurrentRunEnv()
+
+	fmt.Println("Jim stdout")
+	fmt.Fprintln(os.Stderr, "Jim1 stderr")
+	runenv.Message("Jim2 message")
+	time.Sleep(120 * time.Second)
+
 	withShaping := runenv.TestCaseSeq == 1
 
 	ctx := context.Background()

@@ -12,12 +12,8 @@
   - role: setup
     tags: [setup]
   # Docker
-  - role: geerlingguy.docker
+  - role: docker
     tags: [docker]
-  - role: geerlingguy.pip
-    pip_install_packages:
-    - name: docker
-    tags: [pip]
   - role: docker-cleanup
     tags: [docker-cleanup]
   # Filebeat

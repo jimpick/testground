@@ -1,0 +1,8 @@
+- name: Ensure Ubuntu version of Docker is installed
+  apt: name=docker.io state=present
+- name: Ensure Ubuntu Docker python2 library is installed
+  apt: name=python-docker state=present
+- name: Add ubuntu user to docker group
+  user:
+    name: ubuntu
+    groups: docker
