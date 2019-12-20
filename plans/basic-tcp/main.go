@@ -32,10 +32,10 @@ var peerIPSubtree = &sdksync.Subtree{
 func main() {
 	runenv := runtime.CurrentRunEnv()
 
-	fmt.Println("Jim stdout")
+	// fmt.Println("Jim stdout")
 	fmt.Fprintln(os.Stderr, "Jim1 stderr")
 	runenv.Message("Jim2 message")
-	time.Sleep(120 * time.Second)
+	// time.Sleep(120 * time.Second)
 
 	withShaping := runenv.TestCaseSeq == 1
 
@@ -52,7 +52,7 @@ func main() {
 		return
 	}
 
-	_, localnet, _ := net.ParseCIDR("8.0.0.0/8")
+	_, localnet, _ := net.ParseCIDR("16.0.0.0/8")
 
 	var peerIP net.IP
 	for _, ifaddr := range ifaddrs {
@@ -63,6 +63,7 @@ func main() {
 		case *net.IPAddr:
 			ip = v.IP
 		}
+		runenv.Message("IP", ip)
 		if localnet.Contains(ip) {
 			peerIP = ip
 			break
