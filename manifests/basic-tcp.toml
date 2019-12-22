@@ -24,9 +24,9 @@ enabled = true
 # seq 0
 [[testcases]]
 name = "upload"
-instances = { min = 2, max = 200, default = 2 }
+instances = { min = 2, max = 2000, default = 2 }
 
 # seq 1
 [[testcases]]
 name = "upload-with-shaping"
-instances = { min = 2, max = 200, default = 2 }
+instances = { min = 2, max = 2000, default = 2 }

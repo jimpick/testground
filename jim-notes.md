@@ -10,4 +10,13 @@ Suggestions:
  * the admin user is specific to Debian. If not using Debian please use the appropriate user based on your OS.
  * read about installing addons at: https://github.com/kubernetes/kops/blob/master/docs/addons.md.
 
+Update kops to 500 pods per node:
+
+```
+kops edit cluster
+
+spec:
+  kubelet:
+    maxPods: 500
+```
 

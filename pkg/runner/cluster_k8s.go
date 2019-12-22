@@ -102,7 +102,7 @@ func (*ClusterK8sRunner) Run(ctx context.Context, input *api.RunInput, ow io.Wri
 	env := util.ToEnvVar(runenv.ToEnvVars())
 	env = append(env, v1.EnvVar{
 		Name:  "REDIS_HOST",
-		Value: "10.0.90.3",
+		Value: "10.0.40.4",
 	})
 
 	// Define k8s client configuration
@@ -159,7 +159,8 @@ func (*ClusterK8sRunner) Run(ctx context.Context, input *api.RunInput, ow io.Wri
 							Env:   env,
 							Resources: v1.ResourceRequirements{
 								Limits: v1.ResourceList{
-									v1.ResourceMemory: resource.MustParse("30Mi"),
+									v1.ResourceMemory: resource.MustParse("20Mi"),
+									v1.ResourceCPU: resource.MustParse("5m"),
 								},
 							},
 						},

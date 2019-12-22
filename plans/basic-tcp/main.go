@@ -230,7 +230,7 @@ func main() {
 		runenv.Message(fmt.Sprintf("Sender: %v", peerIP))
 
 		// Delay so as to not overload server
-		time.Sleep(time.Duration(seq-1) * 50 * time.Millisecond)
+		time.Sleep(time.Duration(seq-1) * 100 * time.Millisecond)
 
 		// Wait until ready state is signalled.
 		// runenv.Message("Waiting for ready")
