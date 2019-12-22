@@ -29,12 +29,20 @@ var peerIPSubtree = &sdksync.Subtree{
 	},
 }
 
+var serverIPSubtree = &sdksync.Subtree{
+	GroupKey:    "serverIP",
+	PayloadType: reflect.TypeOf(&net.IP{}),
+	KeyFunc: func(val interface{}) string {
+		return "serverIP"
+	},
+}
+
 func main() {
 	runenv := runtime.CurrentRunEnv()
 
 	// fmt.Println("Jim stdout")
-	fmt.Fprintln(os.Stderr, "Jim1 stderr")
-	runenv.Message("Jim2 message")
+	// fmt.Fprintln(os.Stderr, "Jim1 stderr")
+	// runenv.Message("Jim2 message")
 	// time.Sleep(120 * time.Second)
 
 	withShaping := runenv.TestCaseSeq == 1
@@ -52,7 +60,8 @@ func main() {
 		return
 	}
 
-	_, localnet, _ := net.ParseCIDR("100.0.0.0/8")
+	_, localnet, _ := net.ParseCIDR("8.0.0.0/8")
+	_, k8snet, _ := net.ParseCIDR("100.0.0.0/8")
 
 	var peerIP net.IP
 	for _, ifaddr := range ifaddrs {
@@ -63,8 +72,12 @@ func main() {
 		case *net.IPAddr:
 			ip = v.IP
 		}
-		runenv.Message("IP", ip)
+		runenv.Message(fmt.Sprintf("IP: %v", ip))
 		if localnet.Contains(ip) {
+			peerIP = ip
+			break
+		}
+		if k8snet.Contains(ip) {
 			peerIP = ip
 			break
 		}
@@ -133,6 +146,12 @@ func main() {
 	switch {
 	case seq == 1: // receiver
 		runenv.Message(fmt.Sprintf("Receiver: %v", peerIP))
+
+		_, err = writer.Write(serverIPSubtree, &peerIP)
+		if err != nil {
+			runenv.Abort(err)
+			return
+		}
 
 		quit := make(chan int)
 
@@ -207,25 +226,11 @@ func main() {
 		}
 		// runenv.Message("State: received")
 
-	case seq == 2: // sender
+	case seq >= 2: // sender
 		runenv.Message(fmt.Sprintf("Sender: %v", peerIP))
 
-		// Connect to other peers
-		peerIPCh := make(chan *net.IP, 16)
-		cancel, err := watcher.Subscribe(peerIPSubtree, peerIPCh)
-		if err != nil {
-			runenv.Abort(err)
-		}
-		defer cancel()
-
-		var peerIPsToDial = make([]net.IP, 0)
-		for i := 0; i < runenv.TestInstanceCount; i++ {
-			receivedPeerIP := <-peerIPCh
-			if receivedPeerIP.String() == peerIP.String() {
-				continue
-			}
-			peerIPsToDial = append(peerIPsToDial, *receivedPeerIP)
-		}
+		// Delay so as to not overload server
+		time.Sleep(time.Duration(seq-1) * 50 * time.Millisecond)
 
 		// Wait until ready state is signalled.
 		// runenv.Message("Waiting for ready")
@@ -234,6 +239,23 @@ func main() {
 			panic(err)
 		}
 		// runenv.Message("State: ready")
+
+		// Connect to other peers
+		peerIPCh := make(chan *net.IP, 16)
+		cancel, err := watcher.Subscribe(serverIPSubtree, peerIPCh)
+		if err != nil {
+			runenv.Abort(err)
+		}
+		defer cancel()
+
+		var peerIPsToDial = make([]net.IP, 0)
+		for i := 0; i < 1; i++ {
+			receivedPeerIP := <-peerIPCh
+			if receivedPeerIP.String() == peerIP.String() {
+				continue
+			}
+			peerIPsToDial = append(peerIPsToDial, *receivedPeerIP)
+		}
 
 		for _, peerIPToDial := range peerIPsToDial {
 			// runenv.Message(fmt.Sprintf("Dialing %v", peerIPToDial))
