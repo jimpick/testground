@@ -52,7 +52,7 @@ func main() {
 		return
 	}
 
-	_, localnet, _ := net.ParseCIDR("16.0.0.0/8")
+	_, localnet, _ := net.ParseCIDR("100.0.0.0/8")
 
 	var peerIP net.IP
 	for _, ifaddr := range ifaddrs {

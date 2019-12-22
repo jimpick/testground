@@ -100,6 +100,10 @@ func (*ClusterK8sRunner) Run(ctx context.Context, input *api.RunInput, ow io.Wri
 	//env := util.ToOptionsSlice(runenv.ToEnvVars())
 
 	env := util.ToEnvVar(runenv.ToEnvVars())
+	env = append(env, v1.EnvVar{
+		Name:  "REDIS_HOST",
+		Value: "10.0.90.3",
+	})
 
 	// Define k8s client configuration
 	config := defaultKubernetesConfig()

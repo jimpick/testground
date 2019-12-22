@@ -1,0 +1,16 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: redis
+  annotations:
+    k8s.v1.cni.cncf.io/networks: '[
+            { "name": "flannel2-conf" }
+    ]'
+spec:
+  containers:
+  - name: redis
+    command: ["redis-server"]
+    image: redis
+    ports:
+    - containerPort: 6379
